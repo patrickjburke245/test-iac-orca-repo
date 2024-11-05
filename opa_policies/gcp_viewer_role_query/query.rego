@@ -1,7 +1,7 @@
 package Cx
 
 CxPolicy[result] {
-    module := input.document[i].resource[_]
+    module := input.document[i].moudle[_]
     roles := module.roles
     role := roles[_]
 
