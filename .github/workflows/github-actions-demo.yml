@@ -32,4 +32,4 @@ jobs:
           format: "cli,sarif"
           output: "results/"
           exit_code: 0
-          custom_controls: "./opa_policies/gcp_viewer_role_query/query.rego"
+          custom_controls: "./opa_policies/gcp_viewer_role_query"
