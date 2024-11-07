@@ -1,35 +1,71 @@
-name: Sample Orca IaC Scan Workflow
+
+
+name: IaC Scan - ALL (Non-Shared)
 on:
-  # Scan for each push event on your protected branch. If you have a different branch configured, please adjust the configuration accordingly by replacing 'main'.
   push:
-    branches: [ "main" ]
-  # NOTE: To enable scanning for pull requests, uncomment the section below.
-  #pull_request:
-    #branches: [ "main" ]
-  # NOTE: To schedule a daily scan at midnight, uncomment the section below.
-  #schedule:
-    #- cron: '0 0 * * *'
+    branches:
+      - master
+      - main
+    paths:
+      - '**.tf'
+      - '**.json'
+      - '**.yml'
+      - '**.yaml'
+  pull_request:
+    paths:
+      - '**.tf'
+      - '**.json'
+      - '**.yml'
+      - '**.yaml'
+    types: [opened, synchronize, reopened]
+permissions: 
+  contents: read
+  checks: write
+  issues: write
+  pull-requests: write
+  security-events: write
+  statuses: write
 jobs:
   orca-iac_scan:
-    name: Orca IaC Scan
+    name: IaC Scan - Orca (ALL)
     runs-on: ubuntu-latest
     env:
-      PROJECT_KEY:  default # Set the desired project to run the cli scanning with
+      PROJECT_KEY: all-iac
     steps:
-      # Checkout your repository under $GITHUB_WORKSPACE, so your job can access it
       - name: Checkout Repository
         uses: actions/checkout@v4
 
       - name: Run Orca IaC Scan
         uses: orcasecurity/shiftleft-iac-action@v1
+        id: orca_scan
         with:
-          api_token: ${{ secrets.ORCA_SECURITY_API_TOKEN }}
+          api_token: ${{ secrets.ORCA_SECURITY_API_TOKEN_REPO }}
           project_key: ${{ env.PROJECT_KEY }}
-          path:
-            # scanning directories: ./terraform/ ./sub-dir/ and a file: ./Dockerfile
-            "./"
-          show_annotation: false
+          path: "./"
+          show_annotations: false
           format: "cli,sarif"
-          output: "results/"
-          exit_code: 0
-          custom_controls: "./opa_policies/gcp_viewer_role_query"
+          output:
+            "results/"
+          exit_code: 0 # always show non-failure
+          custom_controls: "./.github/workflows/opa_policies/gcp_viewer_role_query"
+      - name: Upload SARIF file
+        uses: github/codeql-action/upload-sarif@v3
+        if: github.event_name == 'push'
+        with:
+          sarif_file: results/iac.sarif
+
+      # - name: Add Comment if Orca Scan failed
+      #   if: failure() && github.event_name == 'pull_request'
+      #   uses: actions/github-script@v6
+      #   with:
+      #     github-token: ${{ secrets.GITHUB_TOKEN }}
+      #     script: |
+      #       const message = "Required Infrastructure as Code (IaC) checks have **FAILED**. Please address these concerns. All checks will automatically re-run as the PR is updated. Please contact @cloudsecurity in the [#cloudsec](https://tempuslabs.enterprise.slack.com/archives/C06GP49DTEZ) Slack channel with any concerns, or if an exemption review is required. Admin merges/forced merges against policy will automatically generate requests for a required written explanation.";
+      #       const payload = {
+      #         owner: context.repo.owner,
+      #         repo: context.repo.repo,
+      #         issue_number: context.issue.number,
+      #         body: message
+      #       };
+      #       const response = await github.rest.issues.createComment(payload);
+      #       console.log(response.data);
