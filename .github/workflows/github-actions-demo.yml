@@ -30,7 +30,7 @@ jobs:
     name: IaC Scan - Orca (ALL)
     runs-on: ubuntu-latest
     env:
-      PROJECT_KEY: all-iac
+      PROJECT_KEY: default
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
